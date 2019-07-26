@@ -4,100 +4,85 @@ const { statusOK } = require("../util/utils");
 const baseURL = "http://localhost:9090/v1/";
 
 async function registerDevice(payload) {
-  console.log("register device");
-  try {
-    const putResponse = await axios({
-      url: `/devices/${payload.deviceHash}`,
+  console.log("Registering the device...");
+
+  const putResponse = await axios({
+    url: `/devices/${payload.deviceHash}`,
+    baseURL: baseURL,
+    method: "put",
+    data: payload,
+    validateStatus: function(status) {
+      return status < 500;
+    }
+  });
+  if (!statusOK(putResponse.status)) {
+    // if the device doesn't exist, create the device
+    const postResponse = await axios({
+      url: `/devices`,
       baseURL: baseURL,
-      method: "put",
+      method: "post",
       data: payload,
       validateStatus: function(status) {
         return status < 500;
       }
     });
-    if (!statusOK(putResponse.status)) {
-      // if the device doesn't exist, create the device
-      const postResponse = await axios({
-        url: `/devices`,
-        baseURL: baseURL,
-        method: "post",
-        data: payload,
-        validateStatus: function(status) {
-          return status < 500;
-        }
-      });
-      // If the user failed to be created, return false
-      if (!statusOK(postResponse.status)) {
-        console.log(postResponse);
-        return false;
-      }
+    // If the user failed to be created, return false
+    if (!statusOK(postResponse.status)) {
+      throw new Error(
+        `Failed to register the device, with HTTP status code ${
+          postResponse.status
+        }`
+      );
     }
-
-    return true;
-  } catch (err) {
-    console.log(err);
-    return false;
   }
 }
 
-async function registerUser(payload) {
-  console.log("making requests");
-  try {
-    const putResponse = await updateUser(payload);
-    if (!statusOK(putResponse.status)) {
-      // if the user doesn't exist, create the user
-      const postResponse = await createUser({});
-      // If the user failed to be created, return false
-      if (!statusOK(postResponse.status)) {
-        console.log(postResponse);
-        return false;
-      }
+async function createUser(payload = {}) {
+  console.log("Creating a new user...");
+
+  const response = await axios({
+    url: `/users`,
+    baseURL: baseURL,
+    method: "post",
+    data: payload, // No data to send yet... just get id
+    validateStatus: function(status) {
+      return status < 500;
     }
-    return true;
-  } catch (err) {
-    console.log(err);
-    return false;
+  });
+
+  if (!statusOK(response.status)) {
+    throw new Error(
+      `Failed to create the user, with HTTP status code ${response.status}`
+    );
   }
+
+  return response;
 }
 
-async function createUser(payload) {
-  try {
-    const response = await axios({
-      url: `/users`,
-      baseURL: baseURL,
-      method: "post",
-      data: payload, // No data to send yet... just get id
-      validateStatus: function(status) {
-        return status < 500;
-      }
-    });
+async function verifyUserExists(payload) {
+  console.log(`Verifying user has been created...`);
 
-    return response;
-  } catch (err) {
-    console.log(err);
+  const response = await axios({
+    url: `/users/${payload.uuid}`,
+    baseURL: baseURL,
+    method: "get",
+    data: {},
+    validateStatus: function(status) {
+      return status < 500;
+    }
+  });
+
+  if (!statusOK(response.status)) {
+    throw new Error(
+      `Failed to find the user, with HTTP status code ${response.status}`
+    );
   }
-}
 
-async function updateUser(payload) {
-  try {
-    const response = await axios({
-      url: `/users/${payload.userUUID}`,
-      baseURL: baseURL,
-      method: "put",
-      data: { payload },
-      validateStatus: function(status) {
-        return status < 500;
-      }
-    });
-
-    return response;
-  } catch (err) {
-    console.log(err);
-  }
+  return response;
 }
 
 module.exports = {
   registerDevice,
-  registerUser,
+  verifyUserExists,
   createUser
 };

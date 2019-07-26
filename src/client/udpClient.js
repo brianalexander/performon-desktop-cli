@@ -1,27 +1,23 @@
 const dgram = require("dgram");
 
-const host = "localhost";
-const port = 41234;
+module.exports = function(port) {
+  const host = "localhost";
+  const client = dgram.createSocket("udp4");
 
-// Create udp server socket object.
-const client = dgram.createSocket("udp4");
+  return function sendData(contentType, payload) {
+    const msg = Buffer.from(
+      JSON.stringify({
+        contentType: contentType,
+        payload: payload
+      })
+    );
 
-async function sendData(contentType, payload) {
-  const msg = Buffer.from(
-    JSON.stringify({
-      contentType: contentType,
-      payload: payload
-    })
-  );
-
-  client.send(msg, port, host, err => {
-    if (err) {
-      console.log(err);
-      client.close();
-    }
-  });
-}
-
-module.exports = {
-  sendData
+    console.log(`Uploading data on port ${port}...`);
+    client.send(msg, port, host, err => {
+      if (err) {
+        // client.close();
+        console.log(err.message);
+      }
+    });
+  };
 };

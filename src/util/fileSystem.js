@@ -5,11 +5,12 @@ function writeJSONToDisk(path, jsonOptions) {
 }
 
 function readJSONFromDisk(path) {
-  // eslint-disable-next-line no-useless-catch
   try {
     return JSON.parse(fs.readFileSync(path));
   } catch (err) {
-    return null;
+    throw new Error(
+      `${path} does not exist or the data is corrupted.  Please check that the file exists and is valid JSON.`
+    );
   }
 }
 
